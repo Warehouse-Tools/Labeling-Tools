@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Labeling Tracker</title>
+    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; padding: 15px; }
+        .container { max-width: 450px; margin: 0 auto; background: white; border-radius: 20px; padding: 20px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
+        .header { text-align: center; margin-bottom: 20px; }
+        .header h1 { color: #667eea; font-size: 20px; }
+        .header p { color: #666; font-size: 12px; }
+        
+        .tab-nav { display: flex; gap: 8px; margin-bottom: 15px; }
+        .tab-nav button { flex: 1; padding: 10px; border: 2px solid #e0e0e0; background: white; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 13px; }
+        .tab-nav button.active { background: #667eea; color: white; border-color: #667eea; }
+        
+        .form-group { margin-bottom: 12px; }
+        label { display: block; margin-bottom: 4px; color: #333; font-weight: 600; font-size: 13px; }
+        input { width: 100%; padding: 10px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 14px; }
+        input:focus { outline: none; border-color: #667eea; }
+        input:disabled { background: #f5f5f5; }
+        
+        button { width: 100%; padding: 12px; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; }
+        button:active { transform: scale(0.97); }
+        .btn-primary { background: #667eea; color: white; }
+        .btn-success { background: #4CAF50; color: white; }
+        .btn-danger { background: #f44336; color: white; }
+        .btn-info { background: #2196F3; color: white; }
+        .btn-warning { background: #FF9800; color: white; }
+        .btn-logout { background: #607D8B; color: white; }
+        button:disabled { opacity: 0.5; }
+        
+        .timer { text-align: center; font-size: 36px; font-weight: bold; color: #667eea; margin: 12px 0; padding: 12px; background: #f0f0ff; border-radius: 10px; font-family: 'Courier New', monospace; }
+        .status { text-align: center; padding: 10px; border-radius: 8px; margin: 10px 0; font-weight: 600; font-size: 13px; }
+        .status.idle { background: #f5f5f5; color: #666; }
+        .status.working { background: #c8e6c9; color: #2e7d32; animation: pulse 2s infinite; }
+        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.8} }
+        
+        .button-group { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 15px; }
+        .save-indicator { display: none; text-align: center; background: #4CAF50; color: white; padding: 10px; border-radius: 8px; margin-top: 10px; font-weight: 600; }
+        .save-indicator.show { display: block; }
+        .info-box { background: #fff3cd; border-left: 4px solid #ffc107; border-radius: 8px; padding: 10px; margin: 10px 0; font-size: 12px; }
+        .error-message { background: #ffebee; color: #c62828; padding: 8px; border-radius: 6px; margin: 8px 0; font-size: 12px; display: none; }
+        .success-message { background: #e8f5e9; color: #2e7d32; padding: 8px; border-radius: 6px; margin: 8px 0; font-size: 12px; }
+        .hidden { display: none !important; }
+        .history { margin-top: 15px; max-height: 200px; overflow-y: auto; }
+        .history-item { background: #f9f9f9; padding: 8px; border-radius: 6px; margin-bottom: 5px; font-size: 11px; border-left: 3px solid #667eea; }
+        small { color: #666; font-size: 11px; display: block; margin-top: 3px; }
+        .clear-btn { background: #ff9800; color: white; padding: 6px 12px; border-radius: 5px; font-size: 11px; cursor: pointer; margin-top: 8px; width: auto; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        
+        <!-- PAGE 1: LOGIN -->
+        <div id="loginPage">
+            <div class="header">
+                <h1>🏷️ Labeling Tracker</h1>
+                <p>Simple Login System</p>
+            </div>
+            
+            <div class="tab-nav">
+                <button class="active" onclick="switchTab('admin')">🔑 Admin</button>
+                <button onclick="switchTab('menpower')">👷 Menpower</button>
+            </div>
+            
+            <div id="adminForm">
+                <div class="form-group">
+                    <label>📧 Email</label>
+                    <input type="email" id="adminEmail" placeholder="admin@email.com">
+                </div>
+                <div class="form-group">
+                    <label>🔒 Password</label>
+                    <input type="password" id="adminPassword" placeholder="Password">
+                </div>
+                <button class="btn-primary" onclick="loginAdmin()">🔓 Login</button>
+            </div>
+            
+            <div id="menpowerForm" class="hidden">
+                <div class="form-group">
+                    <label>🏭 Nama Gudang</label>
+                    <input type="text" id="menpowerGudang" placeholder="Masukkan nama gudang">
+                </div>
+                <div class="form-group">
+                    <label>👤 Nama Menpower</label>
+                    <input type="text" id="menpowerNama" placeholder="Masukkan nama lengkap">
+                </div>
+                <button class="btn-success" onclick="loginMenpower()">👷 Masuk Kerja</button>
+            </div>
+            
+            <div class="error-message" id="loginError"></div>
+        </div>
+        
+        <!-- PAGE 2: ADMIN -->
+        <div id="adminPage" class="hidden">
+            <div class="header">
+                <h1>⚙️ Admin Panel</h1>
+                <p id="adminInfo"></p>
+            </div>
+            <button class="btn-logout" onclick="logout()">🚪 Logout</button>
+            
+            <div class="form-group" style="margin-top: 15px;">
+                <label>📊 Sheet ID Database Gudang</label>
+                <input type="text" id="sheetIdInput" placeholder="Masukkan Sheet ID database">
+                <small>Sheet ID dari Google Sheet database</small>
+            </div>
+            <button class="btn-warning" onclick="saveSheetId()" style="margin-top:8px;">💾 Simpan Sheet ID</button>
+            <button class="btn-info" onclick="testConn()" style="margin-top:5px;">🧪 Test Koneksi</button>
+            <div id="adminResult" style="margin-top:8px;"></div>
+            
+            <div class="info-box" style="margin-top:15px;">
+                <strong>📋 Info:</strong><br>
+                <span id="gudangInfo"></span>
+            </div>
+        </div>
+        
+        <!-- PAGE 3: WORKER -->
+        <div id="workerPage" class="hidden">
+            <div class="header">
+                <h1>🏷️ Labeling Tracker</h1>
+                <p id="workerInfo"></p>
+            </div>
+            <button class="btn-logout" onclick="logout()">🚪 Ganti</button>
+            
+            <div class="form-group">
+                <label>📅 Tanggal</label>
+                <input type="date" id="tanggal">
+            </div>
+            <div class="form-group">
+                <label>📦 Nomor PO</label>
+                <div style="display: flex; gap: 8px;">
+                    <input type="text" id="noPO" placeholder="Scan atau ketik No. PO" style="flex: 1;">
+                    <button onclick="scanQR()" style="width: auto; padding: 10px 15px; background: #2196F3; color: white; white-space: nowrap;">
+                        📷 Scan
+                    </button>
+                </div>
+            </div>
+            
+            <div class="timer" id="timerDisplay">00:00:00</div>
+            <div class="status idle" id="statusDisplay">⏸️ Siap Mengerjakan</div>
+            
+            <div class="button-group">
+                <button class="btn-success" id="btnStart" onclick="startWork()">▶️ MULAI</button>
+                <button class="btn-danger" id="btnStop" onclick="stopWork()" disabled>⏹️ SELESAI</button>
+            </div>
+            
+            <div class="save-indicator" id="saveIndicator">✅ Data tersimpan!</div>
+            <div class="info-box" id="currentSession" style="display:none;">
+                <strong>📋 Sesi Aktif:</strong><br><span id="sessionInfo"></span>
+            </div>
+            <div class="error-message" id="errorMessage"></div>
+            <div class="history" id="historyList">
+                <h4>📋 Riwayat Hari Ini:</h4>
+            </div>
+        </div>
+        
+    </div>
+    
+    <script>
+        const API_URL = 'https://script.google.com/macros/s/AKfycbw-OEHXl0W1-2RT4bP_AIIYSlSkgw9t1X5H52DJ7PXJH-E7IrifKMPR9qafwSJdO7tU/exec';
+        
+        let currentUser = null;
+        let sheetId = null;
+        let timerInterval, elapsedSeconds = 0, isWorking = false, currentSession = null;
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('tanggal').valueAsDate = new Date();
+            sheetId = localStorage.getItem('sheetId') || '';
+        });
+        
+        function switchTab(tab) {
+            document.querySelectorAll('.tab-nav button').forEach(b => b.classList.remove('active'));
+            if (tab === 'admin') {
+                document.querySelectorAll('.tab-nav button')[0].classList.add('active');
+                document.getElementById('adminForm').classList.remove('hidden');
+                document.getElementById('menpowerForm').classList.add('hidden');
+            } else {
+                document.querySelectorAll('.tab-nav button')[1].classList.add('active');
+                document.getElementById('adminForm').classList.add('hidden');
+                document.getElementById('menpowerForm').classList.remove('hidden');
+            }
+            document.getElementById('loginError').style.display = 'none';
+        }
+        
+        async function loginAdmin() {
+            const email = document.getElementById('adminEmail').value.trim();
+            const password = document.getElementById('adminPassword').value.trim();
+            if (!email || !password) return showError('Email dan password harus diisi!');
+            
+            try {
+                const res = await fetch(API_URL, {method:'POST', body:JSON.stringify({action:'login', email, password})});
+                const data = await res.json();
+                if (data.result === 'success') {
+                    currentUser = data.admin;
+                    showAdminPage();
+                } else {
+                    showError(data.message);
+                }
+            } catch(e) { showError('Gagal terhubung ke server!'); }
+        }
+        
+        function loginMenpower() {
+            const gudang = document.getElementById('menpowerGudang').value.trim();
+            const nama = document.getElementById('menpowerNama').value.trim();
+            if (!gudang || !nama) return showError('Nama gudang dan nama menpower harus diisi!');
+            
+            currentUser = { nama, gudang, role: 'Menpower' };
+            showWorkerPage();
+        }
+        
+        function showAdminPage() {
+            document.getElementById('loginPage').classList.add('hidden');
+            document.getElementById('adminPage').classList.remove('hidden');
+            document.getElementById('workerPage').classList.add('hidden');
+            document.getElementById('adminInfo').textContent = `${currentUser.nama} (${currentUser.role}) - ${currentUser.gudang}`;
+            document.getElementById('gudangInfo').textContent = `Gudang: ${currentUser.gudang}`;
+            document.getElementById('sheetIdInput').value = sheetId;
+        }
+        
+        function showWorkerPage() {
+            document.getElementById('loginPage').classList.add('hidden');
+            document.getElementById('adminPage').classList.add('hidden');
+            document.getElementById('workerPage').classList.remove('hidden');
+            document.getElementById('workerInfo').textContent = `${currentUser.nama} - ${currentUser.gudang}`;
+            document.getElementById('tanggal').valueAsDate = new Date();
+            loadHistory();
+        }
+        
+        function logout() {
+            // Hentikan timer jika sedang berjalan
+            if (isWorking) {
+                clearInterval(timerInterval);
+                isWorking = false;
+                document.getElementById('btnStart').disabled = false;
+                document.getElementById('btnStop').disabled = true;
+                document.getElementById('noPO').disabled = false;
+                document.getElementById('statusDisplay').textContent = '⏸️ Siap Mengerjakan';
+                document.getElementById('statusDisplay').className = 'status idle';
+                document.getElementById('currentSession').style.display = 'none';
+                elapsedSeconds = 0;
+                document.getElementById('timerDisplay').textContent = '00:00:00';
+            }
+            
+            currentUser = null;
+            document.getElementById('loginPage').classList.remove('hidden');
+            document.getElementById('adminPage').classList.add('hidden');
+            document.getElementById('workerPage').classList.add('hidden');
+            document.getElementById('loginError').style.display = 'none';
+            document.getElementById('errorMessage').style.display = 'none';
+        }
+        
+        function saveSheetId() {
+            sheetId = document.getElementById('sheetIdInput').value.trim();
+            if (!sheetId) return alert('Sheet ID harus diisi!');
+            localStorage.setItem('sheetId', sheetId);
+            document.getElementById('adminResult').innerHTML = '<div class="success-message">✅ Sheet ID disimpan!</div>';
+        }
+        
+        async function testConn() {
+            if (!sheetId) return alert('Simpan Sheet ID dulu!');
+            document.getElementById('adminResult').innerHTML = '<div class="info-box">🧪 Testing...</div>';
+            try {
+                const res = await fetch(`${API_URL}?action=test_connection&sheetId=${sheetId}`);
+                const data = await res.json();
+                document.getElementById('adminResult').innerHTML = data.result === 'success' 
+                    ? '<div class="success-message">✅ Koneksi berhasil ke tab: ' + data.sheetName + '</div>'
+                    : '<div class="error-message">❌ '+data.message+'</div>';
+            } catch(e) {
+                document.getElementById('adminResult').innerHTML = '<div class="error-message">❌ Gagal terhubung</div>';
+            }
+        }
+        
+        function updateTimer() {
+            elapsedSeconds++;
+            const h = Math.floor(elapsedSeconds/3600), m = Math.floor((elapsedSeconds%3600)/60), s = elapsedSeconds%60;
+            document.getElementById('timerDisplay').textContent = `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+        }
+        
+        function startWork() {
+            const tanggal = document.getElementById('tanggal').value;
+            const po = document.getElementById('noPO').value.trim();
+            if (!tanggal || !po) { showError('Lengkapi tanggal dan No. PO!'); return; }
+            
+            if (!sheetId) {
+                showError('⚠️ Sheet ID belum disetting! Hubungi admin.');
+                return;
+            }
+            
+            isWorking = true; elapsedSeconds = 0;
+            currentSession = {
+                namaMenpower: currentUser.nama, tanggal, noPO: po,
+                namaGudang: currentUser.gudang, sheetId: sheetId,
+                waktuMulai: new Date().toLocaleTimeString('id-ID',{hour12:false})
+            };
+            
+            document.getElementById('btnStart').disabled = true;
+            document.getElementById('btnStop').disabled = false;
+            document.getElementById('noPO').disabled = true;
+            document.getElementById('statusDisplay').textContent = '🔨 Sedang Mengerjakan...';
+            document.getElementById('statusDisplay').className = 'status working';
+            document.getElementById('currentSession').style.display = 'block';
+            document.getElementById('sessionInfo').innerHTML = `<strong>${currentSession.namaMenpower}</strong><br>PO: ${currentSession.noPO}<br>Mulai: ${currentSession.waktuMulai}`;
+            document.getElementById('errorMessage').style.display = 'none';
+            timerInterval = setInterval(updateTimer, 1000);
+        }
+        
+        async function stopWork() {
+            if (!isWorking) return;
+            clearInterval(timerInterval); isWorking = false;
+            
+            currentSession.waktuSelesai = new Date().toLocaleTimeString('id-ID',{hour12:false});
+            currentSession.durasi = Math.round((elapsedSeconds/60)*100)/100;
+            currentSession.status = 'Selesai';
+            
+            // Kirim ke server
+            if (sheetId) {
+                try {
+                    await fetch(API_URL, {
+                        method:'POST',
+                        mode:'no-cors',
+                        headers:{'Content-Type':'application/json'},
+                        body:JSON.stringify({action:'submit_work',...currentSession})
+                    });
+                } catch(e) { 
+                    console.log('Gagal kirim ke server, tersimpan lokal'); 
+                }
+            }
+            
+            // Simpan ke localStorage
+            saveLocal(currentSession);
+            
+            // Tampilkan notifikasi
+            document.getElementById('saveIndicator').classList.add('show');
+            setTimeout(() => document.getElementById('saveIndicator').classList.remove('show'), 3000);
+            
+            // Reset UI
+            document.getElementById('btnStart').disabled = false;
+            document.getElementById('btnStop').disabled = true;
+            document.getElementById('noPO').disabled = false;
+            document.getElementById('noPO').value = '';
+            document.getElementById('statusDisplay').textContent = '⏸️ Siap Mengerjakan';
+            document.getElementById('statusDisplay').className = 'status idle';
+            document.getElementById('currentSession').style.display = 'none';
+            elapsedSeconds = 0;
+            document.getElementById('timerDisplay').textContent = '00:00:00';
+            
+            // Load history terbaru
+            loadHistory();
+        }
+        
+        function saveLocal(session) {
+            let history = JSON.parse(localStorage.getItem('workHistory')||'[]');
+            history.unshift({...session, timestamp: new Date().toISOString()});
+            if (history.length > 50) history = history.slice(0,50);
+            localStorage.setItem('workHistory', JSON.stringify(history));
+        }
+        
+        function loadHistory() {
+            const history = JSON.parse(localStorage.getItem('workHistory')||'[]');
+            const container = document.getElementById('historyList');
+            
+            if (history.length === 0) {
+                container.innerHTML = '<h4>📋 Riwayat Hari Ini:</h4><p style="color:#999;text-align:center;">Belum ada riwayat</p>';
+                return;
+            }
+            
+            let html = '<h4>📋 Riwayat Terakhir: <small>(' + history.length + ' data)</small></h4>';
+            history.slice(0,10).forEach((item,i) => {
+                html += `<div class="history-item"><strong>#${i+1} - ${item.namaMenpower}</strong><br>📦 PO: ${item.noPO} | ⏱️ ${item.durasi} menit | 📅 ${item.tanggal}</div>`;
+            });
+            
+            if (history.length > 10) {
+                html += `<p style="text-align:center;color:#999;font-size:11px;">+ ${history.length - 10} riwayat lainnya</p>`;
+            }
+            
+            html += `<button class="clear-btn" onclick="clearHistory()">🗑️ Hapus Riwayat</button>`;
+            
+            container.innerHTML = html;
+        }
+        
+        function clearHistory() {
+            if (confirm('Hapus semua riwayat di HP ini?\n\nData di Google Sheet TIDAK akan terhapus.')) {
+                localStorage.removeItem('workHistory');
+                loadHistory();
+            }
+        }
+        
+        // ========== QR SCANNER ==========
+        function scanQR() {
+            const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+            
+            if (isMobile && typeof Html5Qrcode !== 'undefined') {
+                const modal = document.createElement('div');
+                modal.id = 'qrModal';
+                modal.style.cssText = `
+                    position:fixed; top:0; left:0; width:100%; height:100%;
+                    background:rgba(0,0,0,0.95); z-index:9999;
+                    display:flex; align-items:center; justify-content:center;
+                `;
+                modal.innerHTML = `
+                    <div style="background:white; padding:20px; border-radius:15px; width:90%; max-width:400px;">
+                        <h3 style="text-align:center; margin-bottom:15px;">📷 Scan QR Code PO</h3>
+                        <div id="qrReader" style="width:100%;"></div>
+                        <button onclick="closeQR()" style="width:100%; padding:12px; background:#f44336; color:white; border:none; border-radius:8px; font-size:16px; margin-top:15px;">
+                            ❌ Tutup
+                        </button>
+                    </div>
+                `;
+                document.body.appendChild(modal);
+                
+                const html5QrCode = new Html5Qrcode("qrReader");
+                html5QrCode.start(
+                    { facingMode: "environment" },
+                    { fps: 10, qrbox: { width: 250, height: 250 } },
+                    (decodedText) => {
+                        document.getElementById('noPO').value = decodedText;
+                        closeQR();
+                        html5QrCode.stop();
+                    },
+                    () => {}
+                ).catch(err => {
+                    console.log('Camera error:', err);
+                    closeQR();
+                    manualInput();
+                });
+                
+                window.closeQR = function() {
+                    if (html5QrCode) html5QrCode.stop().catch(() => {});
+                    const modalEl = document.getElementById('qrModal');
+                    if (modalEl) modalEl.remove();
+                };
+            } else {
+                manualInput();
+            }
+        }
+        
+        function manualInput() {
+            const po = prompt('📦 Masukkan Nomor PO:', '');
+            if (po) document.getElementById('noPO').value = po.trim();
+        }
+        
+        function showError(msg) {
+            const el = document.getElementById('loginError');
+            if (el) {
+                el.textContent = msg;
+                el.style.display = 'block';
+                setTimeout(() => el.style.display = 'none', 4000);
+            }
+            
+            const el2 = document.getElementById('errorMessage');
+            if (el2 && currentUser && currentUser.role === 'Menpower') {
+                el2.textContent = msg;
+                el2.style.display = 'block';
+                setTimeout(() => el2.style.display = 'none', 4000);
+            }
+        }
+    </script>
+</body>
+</html>
