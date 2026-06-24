@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Labeling Tracker v5</title>
+    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; padding: 10px; }
+        .container { max-width: 450px; margin: 0 auto; background: white; border-radius: 20px; padding: 20px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
+        .header { text-align: center; margin-bottom: 15px; }
+        .header h1 { color: #667eea; font-size: 20px; }
+        .header p { color: #666; font-size: 12px; }
+        .tab-nav { display: flex; gap: 8px; margin-bottom: 15px; }
+        .tab-nav button { flex: 1; padding: 10px; border: 2px solid #e0e0e0; background: white; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 13px; }
+        .tab-nav button.active { background: #667eea; color: white; border-color: #667eea; }
+        .form-group { margin-bottom: 12px; }
+        label { display: block; margin-bottom: 4px; color: #333; font-weight: 600; font-size: 13px; }
+        input, select { width: 100%; padding: 12px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 16px; }
+        input:focus, select:focus { outline: none; border-color: #667eea; }
+        input:disabled { background: #f5f5f5; }
+        button { padding: 12px; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; }
+        button:active { transform: scale(0.97); }
+        .btn-primary { background: #667eea; color: white; width: 100%; }
+        .btn-success { background: #4CAF50; color: white; }
+        .btn-danger { background: #f44336; color: white; }
+        .btn-info { background: #2196F3; color: white; }
+        .btn-warning { background: #FF9800; color: white; width: 100%; }
+        .btn-logout { background: #607D8B; color: white; width: 100%; margin-bottom: 10px; }
+        .btn-refresh { background: #00BCD4; color: white; font-size: 12px; padding: 8px 15px; width: auto; }
+        .btn-scan { background: #FF9800; color: white; padding: 12px 15px; width: auto; white-space: nowrap; font-size: 16px; }
+        .btn-delete { background: #f44336; color: white; border: none; padding: 6px 10px; border-radius: 6px; font-size: 11px; cursor: pointer; width: auto; }
+        .btn-full { width: 100%; margin-top: 8px; }
+        button:disabled { opacity: 0.5; }
+        .timer { text-align: center; font-size: 40px; font-weight: bold; color: #667eea; margin: 15px 0; padding: 15px; background: #f0f0ff; border-radius: 10px; font-family: 'Courier New', monospace; }
+        .status { text-align: center; padding: 12px; border-radius: 8px; margin: 10px 0; font-weight: 600; font-size: 14px; }
+        .status.idle { background: #f5f5f5; color: #666; }
+        .status.working { background: #c8e6c9; color: #2e7d32; animation: pulse 2s infinite; }
+        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.8} }
+        .button-group { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px; }
+        .button-group button { padding: 18px; font-size: 18px; }
+        .save-indicator { display: none; text-align: center; background: #4CAF50; color: white; padding: 12px; border-radius: 8px; margin-top: 10px; font-weight: 600; }
+        .save-indicator.show { display: block; }
+        .info-box { background: #fff3cd; border-left: 4px solid #ffc107; border-radius: 8px; padding: 10px; margin: 10px 0; font-size: 12px; }
+        .error-message { background: #ffebee; color: #c62828; padding: 10px; border-radius: 6px; margin: 8px 0; font-size: 13px; display: none; }
+        .success-message { background: #e8f5e9; color: #2e7d32; padding: 8px; border-radius: 6px; margin: 8px 0; font-size: 12px; }
+        .hidden { display: none !important; }
+        .gudang-card { background: white; border: 2px solid #e0e0e0; border-radius: 10px; padding: 10px; margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center; font-size: 13px; }
+        .gudang-card.ready { border-color: #4CAF50; background: #f1f8e9; }
+        .gudang-status { font-size: 11px; padding: 3px 8px; border-radius: 10px; }
+        .gudang-status.ready { background: #4CAF50; color: white; }
+        .history { margin-top: 15px; max-height: 200px; overflow-y: auto; }
+        .history-item { background: #f9f9f9; padding: 8px; border-radius: 6px; margin-bottom: 5px; font-size: 11px; border-left: 3px solid #667eea; }
+        small { color: #666; font-size: 11px; display: block; margin-top: 3px; }
+        .clear-btn { background: #ff9800; color: white; padding: 6px 12px; border-radius: 5px; font-size: 11px; cursor: pointer; margin-top: 8px; width: auto; }
+        .admin-section { background: #f9f9f9; padding: 15px; border-radius: 10px; margin-top: 15px; }
+        .admin-section h3 { margin-bottom: 10px; font-size: 15px; }
+        .po-input-row { display: flex; gap: 8px; align-items: stretch; }
+        .po-input-row input { flex: 1; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        
+        <!-- LOGIN PAGE -->
+        <div id="loginPage">
+            <div class="header"><h1>🏷️ Labeling Tracker</h1><p>Scan PO - Tracking Waktu Kerja</p></div>
+            
+            <div class="tab-nav">
+                <button class="active" onclick="switchTab('admin')">🔑 Admin</button>
+                <button onclick="switchTab('menpower')">👷 Menpower</button>
+            </div>
+            
+            <div id="adminForm">
+                <div class="form-group"><label>📧 Email</label><input type="email" id="adminEmail" placeholder="admin@email.com"></div>
+                <div class="form-group"><label>🔒 Password</label><input type="password" id="adminPassword" placeholder="Password"></div>
+                <button class="btn-primary" onclick="loginAdmin()">🔓 Login</button>
+            </div>
+            
+            <div id="menpowerForm" class="hidden">
+                <div class="form-group"><label>🏭 Status Gudang</label><button class="btn-refresh" onclick="loadGudangList()">🔄 Refresh</button><div id="gudangStatusList" style="max-height:120px;overflow-y:auto;margin-top:5px;"></div></div>
+                <div class="form-group"><label>👤 Nama Menpower</label><input type="text" id="menpowerNama" placeholder="Masukkan nama lengkap"></div>
+                <div class="form-group"><label>🏭 Pilih Gudang</label><select id="menpowerGudangSelect"><option value="">Refresh dulu...</option></select></div>
+                <div class="form-group"><label>📝 Atau Input Manual</label><input type="text" id="menpowerGudangManual" placeholder="Ketik nama gudang"></div>
+                <button class="btn-primary" onclick="loginMenpower()" style="background:#4CAF50;">👷 Masuk Kerja</button>
+            </div>
+            <div class="error-message" id="loginError"></div>
+        </div>
+        
+        <!-- ADMIN PAGE -->
+        <div id="adminPage" class="hidden">
+            <div class="header"><h1>⚙️ Admin Panel</h1><p id="adminInfo"></p></div>
+            <button class="btn-logout" onclick="logout()">🚪 Logout</button>
+            
+            <div class="admin-section">
+                <h3>📝 Tambah/Update Gudang</h3>
+                <div class="form-group"><label>🏭 Nama Gudang</label><input type="text" id="adminNamaGudang" placeholder="Contoh: Gudang Jakarta Pusat"></div>
+                <div class="form-group"><label>📊 Sheet ID Database</label><input type="text" id="adminSheetId" placeholder="Masukkan Sheet ID"></div>
+                <button class="btn-warning" onclick="testConn()">🧪 Test Koneksi</button>
+                <button class="btn-success btn-full" onclick="saveGudangConfig()">💾 Simpan & Publikasikan</button>
+                <div id="adminResult" style="margin-top:8px;"></div>
+            </div>
+            
+            <div style="margin-top:15px;">
+                <h4>📋 Gudang Terkonfigurasi:</h4>
+                <div id="adminGudangList"></div>
+                <button class="btn-refresh" onclick="loadAdminGudangList()">🔄 Refresh</button>
+            </div>
+        </div>
+        
+        <!-- WORKER PAGE -->
+        <div id="workerPage" class="hidden">
+            <div class="header"><h1>🏷️ Labeling Tracker</h1><p id="workerInfo"></p></div>
+            <button class="btn-logout" onclick="logout()">🚪 Ganti</button>
+            <div class="form-group"><label>📅 Tanggal</label><input type="date" id="tanggal"></div>
+            <div class="form-group">
+                <label>📦 Nomor PO</label>
+                <div class="po-input-row"><input type="text" id="noPO" placeholder="Ketik No. PO di sini" style="flex: 1;"><button class="btn-scan" onclick="scanQRSimple()">📷</button></div>
+                <small>👆 Ketik manual atau klik 📷 untuk scan</small>
+            </div>
+            <div class="timer" id="timerDisplay">00:00:00</div>
+            <div class="status idle" id="statusDisplay">⏸️ Siap Mengerjakan</div>
+            <div class="button-group"><button class="btn-success" id="btnStart" onclick="startWork()">▶️ MULAI</button><button class="btn-danger" id="btnStop" onclick="stopWork()" disabled>⏹️ SELESAI</button></div>
+            <div class="save-indicator" id="saveIndicator">✅ Data tersimpan!</div>
+            <div class="info-box" id="currentSession" style="display:none;"><strong>📋 Sesi Aktif:</strong><br><span id="sessionInfo"></span></div>
+            <div class="error-message" id="workerError"></div>
+            <div class="history" id="historyList"><h4>📋 Riwayat Hari Ini:</h4></div>
+        </div>
+        
+    </div>
+    
+    <script>
+        const API_URL = 'https://script.google.com/macros/s/AKfycbw-OEHXl0W1-2RT4bP_AIIYSlSkgw9t1X5H52DJ7PXJH-E7IrifKMPR9qafwSJdO7tU/exec';
+        
+        let currentUser = null, currentGudang = null, sheetId = null;
+        let timerInterval, elapsedSeconds = 0, isWorking = false, currentSession = null;
+        let gudangList = [];
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('tanggal').valueAsDate = new Date();
+        });
+        
+        function switchTab(tab) {
+            document.querySelectorAll('.tab-nav button').forEach(b => b.classList.remove('active'));
+            if (tab === 'admin') {
+                document.querySelectorAll('.tab-nav button')[0].classList.add('active');
+                document.getElementById('adminForm').classList.remove('hidden');
+                document.getElementById('menpowerForm').classList.add('hidden');
+            } else {
+                document.querySelectorAll('.tab-nav button')[1].classList.add('active');
+                document.getElementById('adminForm').classList.add('hidden');
+                document.getElementById('menpowerForm').classList.remove('hidden');
+                loadGudangList();
+            }
+            hideAllErrors();
+        }
+        
+        async function loadGudangList() {
+            const container = document.getElementById('gudangStatusList');
+            const select = document.getElementById('menpowerGudangSelect');
+            container.innerHTML = '<p style="color:#999;font-size:12px;">⏳ Memuat...</p>';
+            try {
+                const res = await fetch(`${API_URL}?action=get_gudang_list`);
+                const data = await res.json();
+                if (data.result === 'success') {
+                    gudangList = data.gudangList;
+                    if (gudangList.length === 0) {
+                        container.innerHTML = '<p style="color:#f44336;font-size:12px;">⚠️ Belum ada gudang.</p>';
+                        select.innerHTML = '<option value="">Belum ada gudang</option>';
+                    } else {
+                        let html = ''; select.innerHTML = '<option value="">Pilih Gudang</option>';
+                        gudangList.forEach(g => {
+                            html += `<div class="gudang-card ready"><span>🏭 ${g.namaGudang}</span><span class="gudang-status ready">✅</span></div>`;
+                            select.innerHTML += `<option value="${g.namaGudang}" data-sheetid="${g.sheetId}">${g.namaGudang}</option>`;
+                        });
+                        container.innerHTML = html;
+                    }
+                }
+            } catch(e) { container.innerHTML = '<p style="color:#f44336;">❌ Gagal.</p>'; }
+        }
+        
+        async function loginAdmin() {
+            const email = document.getElementById('adminEmail').value.trim();
+            const password = document.getElementById('adminPassword').value.trim();
+            if (!email || !password) return showError('loginError', 'Isi email & password!');
+            try {
+                const res = await fetch(API_URL, {method:'POST', body:JSON.stringify({action:'login', email, password})});
+                const data = await res.json();
+                if (data.result === 'success') { currentUser = data.admin; showAdminPage(); }
+                else { showError('loginError', data.message); }
+            } catch(e) { showError('loginError', 'Gagal terhubung!'); }
+        }
+        
+        function loginMenpower() {
+            const select = document.getElementById('menpowerGudangSelect');
+            const manual = document.getElementById('menpowerGudangManual').value.trim();
+            const nama = document.getElementById('menpowerNama').value.trim();
+            if (!nama) return showError('loginError', 'Isi nama!');
+            let namaGudang = '', foundSheetId = null;
+            if (select.value) {
+                namaGudang = select.value;
+                foundSheetId = select.options[select.selectedIndex].getAttribute('data-sheetid');
+            } else if (manual) {
+                namaGudang = manual;
+                const found = gudangList.find(g => g.namaGudang.toLowerCase() === manual.toLowerCase());
+                foundSheetId = found ? found.sheetId : null;
+            } else { return showError('loginError', 'Pilih/input gudang!'); }
+            sheetId = foundSheetId;
+            currentGudang = { namaGudang, sheetId };
+            currentUser = { nama, gudang: namaGudang, role: 'Menpower' };
+            showWorkerPage();
+        }
+        
+        function showAdminPage() {
+            document.getElementById('loginPage').classList.add('hidden');
+            document.getElementById('adminPage').classList.remove('hidden');
+            document.getElementById('workerPage').classList.add('hidden');
+            document.getElementById('adminInfo').textContent = `${currentUser.nama} (${currentUser.role})`;
+            loadAdminGudangList();
+        }
+        
+        function showWorkerPage() {
+            document.getElementById('loginPage').classList.add('hidden');
+            document.getElementById('adminPage').classList.add('hidden');
+            document.getElementById('workerPage').classList.remove('hidden');
+            document.getElementById('workerInfo').textContent = `${currentUser.nama} - ${currentGudang.namaGudang}`;
+            document.getElementById('tanggal').valueAsDate = new Date();
+            document.getElementById('noPO').value = '';
+            document.getElementById('noPO').disabled = false;
+            document.getElementById('noPO').focus();
+            loadHistory();
+        }
+        
+        function logout() {
+            if (isWorking) { clearInterval(timerInterval); isWorking = false; resetWorkerUI(); }
+            currentUser = null; currentGudang = null; sheetId = null;
+            document.getElementById('loginPage').classList.remove('hidden');
+            document.getElementById('adminPage').classList.add('hidden');
+            document.getElementById('workerPage').classList.add('hidden');
+            hideAllErrors();
+        }
+        
+        async function saveGudangConfig() {
+            const namaGudang = document.getElementById('adminNamaGudang').value.trim();
+            const adminSheetId = document.getElementById('adminSheetId').value.trim();
+            if (!namaGudang || !adminSheetId) { document.getElementById('adminResult').innerHTML='<div class="error-message">❌ Isi semua!</div>'; return; }
+            document.getElementById('adminResult').innerHTML='<div class="info-box">⏳ Menyimpan...</div>';
+            try {
+                const res = await fetch(API_URL, {method:'POST', body:JSON.stringify({action:'save_gudang_config', email:currentUser.email, namaGudang, sheetId:adminSheetId})});
+                const data = await res.json();
+                document.getElementById('adminResult').innerHTML = data.result==='success' ? '<div class="success-message">✅ Dipublikasikan!</div>' : '<div class="error-message">❌ '+data.message+'</div>';
+                loadAdminGudangList();
+            } catch(e) { document.getElementById('adminResult').innerHTML='<div class="error-message">❌ Gagal</div>'; }
+        }
+        
+        async function testConn() {
+            const id = document.getElementById('adminSheetId').value.trim();
+            if (!id) { document.getElementById('adminResult').innerHTML='<div class="error-message">❌ Isi Sheet ID!</div>'; return; }
+            document.getElementById('adminResult').innerHTML='<div class="info-box">🧪 Testing...</div>';
+            try {
+                const res = await fetch(`${API_URL}?action=test_connection&sheetId=${id}`);
+                const data = await res.json();
+                document.getElementById('adminResult').innerHTML = data.result==='success' ? '<div class="success-message">✅ OK: '+data.sheetName+'</div>' : '<div class="error-message">❌ '+data.message+'</div>';
+            } catch(e) { document.getElementById('adminResult').innerHTML='<div class="error-message">❌ Gagal</div>'; }
+        }
+        
+        async function loadAdminGudangList() {
+            const c = document.getElementById('adminGudangList');
+            try {
+                const res = await fetch(`${API_URL}?action=get_gudang_list`);
+                const data = await res.json();
+                if (data.result === 'success' && data.gudangList.length > 0) {
+                    let h = '';
+                    data.gudangList.forEach(g => {
+                        h += `
+                        <div class="gudang-card ready" style="display:flex;justify-content:space-between;align-items:center;">
+                            <div style="flex:1;">
+                                <strong>${g.namaGudang}</strong><br>
+                                <small>ID: ${g.sheetId ? g.sheetId.substring(0,20)+'...' : '-'}</small>
+                            </div>
+                            <button class="btn-delete" onclick="deleteGudang('${g.namaGudang}')">🗑️ Hapus</button>
+                        </div>`;
+                    });
+                    c.innerHTML = h;
+                } else {
+                    c.innerHTML = '<p style="color:#999;">Belum ada gudang terkonfigurasi.</p>';
+                }
+            } catch(e) {
+                c.innerHTML = '<p style="color:#f44336;">Gagal memuat.</p>';
+            }
+        }
+        
+        async function deleteGudang(namaGudang) {
+            if (!confirm(`⚠️ Yakin hapus gudang "${namaGudang}"?\n\nData di Sheet database TIDAK akan terhapus.`)) return;
+            
+            try {
+                const res = await fetch(API_URL, {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        action: 'delete_gudang_config',
+                        email: currentUser.email,
+                        namaGudang: namaGudang
+                    })
+                });
+                const data = await res.json();
+                
+                if (data.result === 'success') {
+                    alert('✅ ' + data.message);
+                    loadAdminGudangList();
+                } else {
+                    alert('❌ ' + data.message);
+                }
+            } catch(e) {
+                alert('❌ Gagal menghapus!');
+            }
+        }
+        
+        function updateTimer() {
+            elapsedSeconds++;
+            const h=Math.floor(elapsedSeconds/3600), m=Math.floor((elapsedSeconds%3600)/60), s=elapsedSeconds%60;
+            document.getElementById('timerDisplay').textContent=`${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+        }
+        
+        function startWork() {
+            const t=document.getElementById('tanggal').value, p=document.getElementById('noPO').value.trim();
+            if (!t) { showError('workerError','❌ Isi tanggal!'); return; }
+            if (!p) { showError('workerError','❌ Isi No. PO!'); document.getElementById('noPO').focus(); return; }
+            hideAllErrors(); isWorking=true; elapsedSeconds=0;
+            currentSession={namaMenpower:currentUser.nama, tanggal:t, noPO:p, namaGudang:currentGudang.namaGudang, sheetId:sheetId, waktuMulai:new Date().toLocaleTimeString('id-ID',{hour12:false})};
+            document.getElementById('btnStart').disabled=true;
+            document.getElementById('btnStop').disabled=false;
+            document.getElementById('noPO').disabled=true;
+            document.getElementById('statusDisplay').textContent='🔨 Sedang Mengerjakan...';
+            document.getElementById('statusDisplay').className='status working';
+            document.getElementById('currentSession').style.display='block';
+            document.getElementById('sessionInfo').innerHTML=`<strong>${currentSession.namaMenpower}</strong><br>PO: ${currentSession.noPO}<br>Mulai: ${currentSession.waktuMulai}`;
+            timerInterval=setInterval(updateTimer,1000);
+        }
+        
+        async function stopWork() {
+            if (!isWorking) return;
+            clearInterval(timerInterval); isWorking=false;
+            currentSession.waktuSelesai=new Date().toLocaleTimeString('id-ID',{hour12:false});
+            currentSession.durasi=Math.round((elapsedSeconds/60)*100)/100;
+            currentSession.status='Selesai';
+            if (currentSession.sheetId) {
+                try { await fetch(API_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'submit_work',...currentSession})}); } catch(e) {}
+            }
+            saveLocal(currentSession);
+            document.getElementById('saveIndicator').classList.add('show');
+            setTimeout(()=>document.getElementById('saveIndicator').classList.remove('show'),3000);
+            resetWorkerUI();
+            document.getElementById('noPO').value='';
+            loadHistory();
+        }
+        
+        function resetWorkerUI() {
+            document.getElementById('btnStart').disabled=false;
+            document.getElementById('btnStop').disabled=true;
+            document.getElementById('noPO').disabled=false;
+            document.getElementById('statusDisplay').textContent='⏸️ Siap Mengerjakan';
+            document.getElementById('statusDisplay').className='status idle';
+            document.getElementById('currentSession').style.display='none';
+            elapsedSeconds=0;
+            document.getElementById('timerDisplay').textContent='00:00:00';
+        }
+        
+        function saveLocal(s) {
+            let h=JSON.parse(localStorage.getItem('workHistory')||'[]');
+            h.unshift({...s, timestamp:new Date().toISOString()});
+            if (h.length>50) h=h.slice(0,50);
+            localStorage.setItem('workHistory',JSON.stringify(h));
+        }
+        
+        function loadHistory() {
+            const h=JSON.parse(localStorage.getItem('workHistory')||'[]');
+            const c=document.getElementById('historyList');
+            if (h.length===0) { c.innerHTML='<h4>📋 Riwayat:</h4><p style="color:#999;">Belum ada</p>'; return; }
+            let html=`<h4>📋 Riwayat (${h.length}):</h4>`;
+            h.slice(0,10).forEach((item,i)=>html+=`<div class="history-item"><strong>#${i+1} - ${item.namaMenpower}</strong><br>📦 PO: ${item.noPO} | ⏱️ ${item.durasi} menit</div>`);
+            html+=`<button class="clear-btn" onclick="clearHistory()">🗑️ Hapus Riwayat</button>`;
+            c.innerHTML=html;
+        }
+        
+        function clearHistory() { if (confirm('Hapus riwayat?')) { localStorage.removeItem('workHistory'); loadHistory(); } }
+        
+        function scanQRSimple() {
+            document.getElementById('noPO').focus();
+            alert('📷 Scan QR:\n\n1. Buka Kamera HP\n2. Scan QR Code PO\n3. Copy hasilnya\n4. Paste di kolom No. PO\n\nATAU ketik manual.');
+        }
+        
+        function showError(id, msg) {
+            const el=document.getElementById(id);
+            if (el) { el.textContent=msg; el.style.display='block'; setTimeout(()=>el.style.display='none',4000); }
+        }
+        
+        function hideAllErrors() {
+            ['loginError','workerError'].forEach(id=>{ const el=document.getElementById(id); if (el) el.style.display='none'; });
+        }
+    </script>
+</body>
+</html>
