@@ -68,7 +68,7 @@
             
             <div class="tab-nav">
                 <button class="active" onclick="switchTab('admin')">🔑 Admin</button>
-                <button onclick="switchTab('menpower')">👷 Menpower</button>
+                <button onclick="switchTab('manpower')">👷 Manpower</button>
             </div>
             
             <div id="adminForm">
@@ -77,12 +77,12 @@
                 <button class="btn-primary" onclick="loginAdmin()">🔓 Login</button>
             </div>
             
-            <div id="menpowerForm" class="hidden">
+            <div id="manpowerForm" class="hidden">
                 <div class="form-group"><label>🏭 Status Gudang</label><button class="btn-refresh" onclick="loadGudangList()">🔄 Refresh</button><div id="gudangStatusList" style="max-height:120px;overflow-y:auto;margin-top:5px;"></div></div>
-                <div class="form-group"><label>👤 Nama Menpower</label><input type="text" id="menpowerNama" placeholder="Masukkan nama lengkap"></div>
-                <div class="form-group"><label>🏭 Pilih Gudang</label><select id="menpowerGudangSelect"><option value="">Refresh dulu...</option></select></div>
-                <div class="form-group"><label>📝 Atau Input Manual</label><input type="text" id="menpowerGudangManual" placeholder="Ketik nama gudang"></div>
-                <button class="btn-primary" onclick="loginMenpower()" style="background:#4CAF50;">👷 Masuk Kerja</button>
+                <div class="form-group"><label>👤 Nama Manpower</label><input type="text" id="manpowerNama" placeholder="Masukkan nama lengkap"></div>
+                <div class="form-group"><label>🏭 Pilih Gudang</label><select id="manpowerGudangSelect"><option value="">Refresh dulu...</option></select></div>
+                <div class="form-group"><label>📝 Atau Input Manual</label><input type="text" id="manpowerGudangManual" placeholder="Ketik nama gudang"></div>
+                <button class="btn-primary" onclick="loginManpower()" style="background:#4CAF50;">👷 Masuk Kerja</button>
             </div>
             <div class="error-message" id="loginError"></div>
         </div>
@@ -138,11 +138,11 @@
             if (tab === 'admin') {
                 document.querySelectorAll('.tab-nav button')[0].classList.add('active');
                 document.getElementById('adminForm').classList.remove('hidden');
-                document.getElementById('menpowerForm').classList.add('hidden');
+                document.getElementById('manpowerForm').classList.add('hidden');
             } else {
                 document.querySelectorAll('.tab-nav button')[1].classList.add('active');
                 document.getElementById('adminForm').classList.add('hidden');
-                document.getElementById('menpowerForm').classList.remove('hidden');
+                document.getElementById('manpowerForm').classList.remove('hidden');
                 loadGudangList();
             }
             hideAllErrors();
@@ -150,7 +150,7 @@
         
         async function loadGudangList() {
             const container = document.getElementById('gudangStatusList');
-            const select = document.getElementById('menpowerGudangSelect');
+            const select = document.getElementById('manpowerGudangSelect');
             container.innerHTML = '<p style="color:#999;font-size:12px;">⏳ Memuat...</p>';
             try {
                 const res = await fetch(`${API_URL}?action=get_gudang_list`);
@@ -184,10 +184,10 @@
             } catch(e) { showError('loginError', 'Gagal terhubung!'); }
         }
         
-        function loginMenpower() {
-            const select = document.getElementById('menpowerGudangSelect');
-            const manual = document.getElementById('menpowerGudangManual').value.trim();
-            const nama = document.getElementById('menpowerNama').value.trim();
+        function loginManpower() {
+            const select = document.getElementById('manpowerGudangSelect');
+            const manual = document.getElementById('manpowerGudangManual').value.trim();
+            const nama = document.getElementById('manpowerNama').value.trim();
             if (!nama) return showError('loginError', 'Isi nama!');
             let namaGudang = '', foundSheetId = null;
             if (select.value) {
@@ -200,7 +200,7 @@
             } else { return showError('loginError', 'Pilih/input gudang!'); }
             sheetId = foundSheetId;
             currentGudang = { namaGudang, sheetId };
-            currentUser = { nama, gudang: namaGudang, role: 'Menpower' };
+            currentUser = { nama, gudang: namaGudang, role: 'Manpower' };
             showWorkerPage();
         }
         
@@ -302,7 +302,7 @@
             startTime = new Date().getTime(); // SIMPAN WAKTU MULAI
             
             currentSession = {
-                namaMenpower: currentUser.nama, tanggal: t, noPO: p,
+                namaManpower: currentUser.nama, tanggal: t, noPO: p,
                 namaGudang: currentGudang.namaGudang, sheetId: sheetId,
                 waktuMulai: new Date(startTime).toLocaleTimeString('id-ID',{hour12:false})
             };
@@ -313,7 +313,7 @@
             document.getElementById('statusDisplay').textContent = '🔨 Sedang Mengerjakan...';
             document.getElementById('statusDisplay').className = 'status working';
             document.getElementById('currentSession').style.display = 'block';
-            document.getElementById('sessionInfo').innerHTML = `<strong>${currentSession.namaMenpower}</strong><br>PO: ${currentSession.noPO}<br>Mulai: ${currentSession.waktuMulai}`;
+            document.getElementById('sessionInfo').innerHTML = `<strong>${currentSession.namaManpower}</strong><br>PO: ${currentSession.noPO}<br>Mulai: ${currentSession.waktuMulai}`;
             timerInterval = setInterval(updateTimer, 1000);
             updateTimer();
         }
@@ -363,7 +363,7 @@
             const c = document.getElementById('historyList');
             if (h.length===0) { c.innerHTML='<h4>📋 Riwayat:</h4><p style="color:#999;">Belum ada</p>'; return; }
             let html = `<h4>📋 Riwayat (${h.length}):</h4>`;
-            h.slice(0,10).forEach((item,i)=>html+=`<div class="history-item"><strong>#${i+1} - ${item.namaMenpower}</strong><br>📦 PO: ${item.noPO} | ⏱️ ${item.durasi} menit</div>`);
+            h.slice(0,10).forEach((item,i)=>html+=`<div class="history-item"><strong>#${i+1} - ${item.namaManpower}</strong><br>📦 PO: ${item.noPO} | ⏱️ ${item.durasi} menit</div>`);
             html += `<button class="clear-btn" onclick="clearHistory()">🗑️ Hapus Riwayat</button>`;
             c.innerHTML = html;
         }
