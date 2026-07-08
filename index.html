@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Labeling Tracker v5</title>
+    <title>Labeling Tracker v6</title>
     <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
@@ -25,7 +25,6 @@
         .btn-primary { background: #667eea; color: white; width: 100%; }
         .btn-success { background: #4CAF50; color: white; }
         .btn-danger { background: #f44336; color: white; }
-        .btn-info { background: #2196F3; color: white; }
         .btn-warning { background: #FF9800; color: white; width: 100%; }
         .btn-logout { background: #607D8B; color: white; width: 100%; margin-bottom: 10px; }
         .btn-refresh { background: #00BCD4; color: white; font-size: 12px; padding: 8px 15px; width: auto; }
@@ -63,12 +62,13 @@
 <body>
     <div class="container">
         
+        <!-- LOGIN PAGE -->
         <div id="loginPage">
             <div class="header"><h1>🏷️ Labeling Tracker</h1><p>Scan PO - Tracking Waktu Kerja</p></div>
             
             <div class="tab-nav">
                 <button class="active" onclick="switchTab('admin')">🔑 Admin</button>
-                <button onclick="switchTab('manpower')">👷 Manpower</button>
+                <button onclick="switchTab('menpower')">👷 Menpower</button>
             </div>
             
             <div id="adminForm">
@@ -77,16 +77,15 @@
                 <button class="btn-primary" onclick="loginAdmin()">🔓 Login</button>
             </div>
             
-            <div id="manpowerForm" class="hidden">
-                <div class="form-group"><label>🏭 Status Gudang</label><button class="btn-refresh" onclick="loadGudangList()">🔄 Refresh</button><div id="gudangStatusList" style="max-height:120px;overflow-y:auto;margin-top:5px;"></div></div>
-                <div class="form-group"><label>👤 Nama Manpower</label><input type="text" id="manpowerNama" placeholder="Masukkan nama lengkap"></div>
-                <div class="form-group"><label>🏭 Pilih Gudang</label><select id="manpowerGudangSelect"><option value="">Refresh dulu...</option></select></div>
-                <div class="form-group"><label>📝 Atau Input Manual</label><input type="text" id="manpowerGudangManual" placeholder="Ketik nama gudang"></div>
-                <button class="btn-primary" onclick="loginManpower()" style="background:#4CAF50;">👷 Masuk Kerja</button>
+            <div id="menpowerForm" class="hidden">
+                <div class="form-group"><label>🏭 Pilih Gudang</label><button class="btn-refresh" onclick="loadGudangList()">🔄 Refresh</button><div id="gudangStatusList" style="max-height:150px;overflow-y:auto;margin-top:5px;"></div></div>
+                <div class="form-group"><label>👤 Nama Menpower</label><input type="text" id="menpowerNama" placeholder="Masukkan nama lengkap"></div>
+                <button class="btn-primary" onclick="loginMenpower()" style="background:#4CAF50;">👷 Masuk Kerja</button>
             </div>
             <div class="error-message" id="loginError"></div>
         </div>
         
+        <!-- ADMIN PAGE -->
         <div id="adminPage" class="hidden">
             <div class="header"><h1>⚙️ Admin Panel</h1><p id="adminInfo"></p></div>
             <button class="btn-logout" onclick="logout()">🚪 Logout</button>
@@ -101,14 +100,15 @@
             <div style="margin-top:15px;"><h4>📋 Gudang Terkonfigurasi:</h4><div id="adminGudangList"></div><button class="btn-refresh" onclick="loadAdminGudangList()">🔄 Refresh</button></div>
         </div>
         
+        <!-- WORKER PAGE -->
         <div id="workerPage" class="hidden">
             <div class="header"><h1>🏷️ Labeling Tracker</h1><p id="workerInfo"></p></div>
             <button class="btn-logout" onclick="logout()">🚪 Ganti</button>
             <div class="form-group"><label>📅 Tanggal</label><input type="date" id="tanggal"></div>
             <div class="form-group">
                 <label>📦 Nomor PO</label>
-                <div class="po-input-row"><input type="text" id="noPO" placeholder="Ketik No. PO di sini" style="flex: 1;"><button class="btn-scan" onclick="scanQRSimple()">📷</button></div>
-                <small>👆 Ketik manual atau klik 📷 untuk scan</small>
+                <div class="po-input-row"><input type="text" id="noPO" placeholder="Ketik No. PO di sini" style="flex: 1;"><button class="btn-scan" onclick="startQRScan()">📷 Scan</button></div>
+                <small>👆 Ketik manual atau klik Scan untuk scan QR Code</small>
             </div>
             <div class="timer" id="timerDisplay">00:00:00</div>
             <div class="status idle" id="statusDisplay">⏸️ Siap Mengerjakan</div>
@@ -126,8 +126,9 @@
         
         let currentUser = null, currentGudang = null, sheetId = null;
         let timerInterval, isWorking = false, currentSession = null;
-        let startTime = null; // WAKTU MULAI DISIMPAN
+        let startTime = null;
         let gudangList = [];
+        let html5QrCode = null;
         
         document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('tanggal').valueAsDate = new Date();
@@ -138,11 +139,11 @@
             if (tab === 'admin') {
                 document.querySelectorAll('.tab-nav button')[0].classList.add('active');
                 document.getElementById('adminForm').classList.remove('hidden');
-                document.getElementById('manpowerForm').classList.add('hidden');
+                document.getElementById('menpowerForm').classList.add('hidden');
             } else {
                 document.querySelectorAll('.tab-nav button')[1].classList.add('active');
                 document.getElementById('adminForm').classList.add('hidden');
-                document.getElementById('manpowerForm').classList.remove('hidden');
+                document.getElementById('menpowerForm').classList.remove('hidden');
                 loadGudangList();
             }
             hideAllErrors();
@@ -150,7 +151,6 @@
         
         async function loadGudangList() {
             const container = document.getElementById('gudangStatusList');
-            const select = document.getElementById('manpowerGudangSelect');
             container.innerHTML = '<p style="color:#999;font-size:12px;">⏳ Memuat...</p>';
             try {
                 const res = await fetch(`${API_URL}?action=get_gudang_list`);
@@ -158,18 +158,32 @@
                 if (data.result === 'success') {
                     gudangList = data.gudangList;
                     if (gudangList.length === 0) {
-                        container.innerHTML = '<p style="color:#f44336;font-size:12px;">⚠️ Belum ada gudang.</p>';
-                        select.innerHTML = '<option value="">Belum ada gudang</option>';
+                        container.innerHTML = '<p style="color:#f44336;font-size:12px;">⚠️ Belum ada gudang terdaftar. Hubungi admin.</p>';
                     } else {
-                        let html = ''; select.innerHTML = '<option value="">Pilih Gudang</option>';
+                        let html = '<p style="color:#4CAF50;font-size:12px;font-weight:600;">✅ Gudang tersedia:</p>';
                         gudangList.forEach(g => {
-                            html += `<div class="gudang-card ready"><span>🏭 ${g.namaGudang}</span><span class="gudang-status ready">✅</span></div>`;
-                            select.innerHTML += `<option value="${g.namaGudang}" data-sheetid="${g.sheetId}">${g.namaGudang}</option>`;
+                            html += `<div class="gudang-card ready" onclick="selectGudang('${g.namaGudang}','${g.sheetId}')" style="cursor:pointer;">
+                                <span>🏭 ${g.namaGudang}</span><span class="gudang-status ready">✅</span>
+                            </div>`;
                         });
                         container.innerHTML = html;
                     }
                 }
-            } catch(e) { container.innerHTML = '<p style="color:#f44336;">❌ Gagal.</p>'; }
+            } catch(e) { container.innerHTML = '<p style="color:#f44336;">❌ Gagal memuat.</p>'; }
+        }
+        
+        // Fungsi pilih gudang langsung dari card
+        function selectGudang(namaGudang, sheetIdGudang) {
+            currentGudang = { namaGudang, sheetId: sheetIdGudang };
+            sheetId = sheetIdGudang;
+            
+            // Highlight card yang dipilih
+            document.querySelectorAll('.gudang-card').forEach(c => c.style.borderColor = '#e0e0e0');
+            event.target.closest('.gudang-card').style.borderColor = '#4CAF50';
+            event.target.closest('.gudang-card').style.background = '#e8f5e9';
+            
+            // Auto-fokus ke input nama
+            document.getElementById('menpowerNama').focus();
         }
         
         async function loginAdmin() {
@@ -184,23 +198,12 @@
             } catch(e) { showError('loginError', 'Gagal terhubung!'); }
         }
         
-        function loginManpower() {
-            const select = document.getElementById('manpowerGudangSelect');
-            const manual = document.getElementById('manpowerGudangManual').value.trim();
-            const nama = document.getElementById('manpowerNama').value.trim();
-            if (!nama) return showError('loginError', 'Isi nama!');
-            let namaGudang = '', foundSheetId = null;
-            if (select.value) {
-                namaGudang = select.value;
-                foundSheetId = select.options[select.selectedIndex].getAttribute('data-sheetid');
-            } else if (manual) {
-                namaGudang = manual;
-                const found = gudangList.find(g => g.namaGudang.toLowerCase() === manual.toLowerCase());
-                foundSheetId = found ? found.sheetId : null;
-            } else { return showError('loginError', 'Pilih/input gudang!'); }
-            sheetId = foundSheetId;
-            currentGudang = { namaGudang, sheetId };
-            currentUser = { nama, gudang: namaGudang, role: 'Manpower' };
+        function loginMenpower() {
+            const nama = document.getElementById('menpowerNama').value.trim();
+            if (!nama) return showError('loginError', 'Isi nama menpower!');
+            if (!currentGudang || !currentGudang.namaGudang) return showError('loginError', 'Pilih gudang dulu dengan klik card di atas!');
+            
+            currentUser = { nama, gudang: currentGudang.namaGudang, role: 'Menpower' };
             showWorkerPage();
         }
         
@@ -226,6 +229,8 @@
         
         function logout() {
             if (isWorking) { clearInterval(timerInterval); isWorking = false; resetWorkerUI(); }
+            if (html5QrCode) { try { html5QrCode.stop().catch(()=>{}); } catch(e) {} html5QrCode = null; }
+            const m = document.getElementById('qrModal'); if (m) m.remove();
             currentUser = null; currentGudang = null; sheetId = null; startTime = null;
             document.getElementById('loginPage').classList.remove('hidden');
             document.getElementById('adminPage').classList.add('hidden');
@@ -285,7 +290,7 @@
             } catch(e) { alert('❌ Gagal!'); }
         }
         
-        // ========== TIMER DENGAN startTime (TETAP JALAN SAAT LAYAR MATI) ==========
+        // ========== TIMER ==========
         function updateTimer() {
             if (!startTime) return;
             const now = new Date().getTime();
@@ -299,11 +304,15 @@
             if (!t) { showError('workerError','❌ Isi tanggal!'); return; }
             if (!p) { showError('workerError','❌ Isi No. PO!'); document.getElementById('noPO').focus(); return; }
             hideAllErrors(); isWorking = true;
-            startTime = new Date().getTime(); // SIMPAN WAKTU MULAI
+            startTime = new Date().getTime();
             
+            // FIX: gunakan namaMenpower (sesuai Apps Script)
             currentSession = {
-                namaManpower: currentUser.nama, tanggal: t, noPO: p,
-                namaGudang: currentGudang.namaGudang, sheetId: sheetId,
+                namaMenpower: currentUser.nama,
+                tanggal: t,
+                noPO: p,
+                namaGudang: currentGudang.namaGudang,
+                sheetId: sheetId,
                 waktuMulai: new Date(startTime).toLocaleTimeString('id-ID',{hour12:false})
             };
             
@@ -313,7 +322,7 @@
             document.getElementById('statusDisplay').textContent = '🔨 Sedang Mengerjakan...';
             document.getElementById('statusDisplay').className = 'status working';
             document.getElementById('currentSession').style.display = 'block';
-            document.getElementById('sessionInfo').innerHTML = `<strong>${currentSession.namaManpower}</strong><br>PO: ${currentSession.noPO}<br>Mulai: ${currentSession.waktuMulai}`;
+            document.getElementById('sessionInfo').innerHTML = `<strong>${currentSession.namaMenpower}</strong><br>PO: ${currentSession.noPO}<br>Mulai: ${currentSession.waktuMulai}`;
             timerInterval = setInterval(updateTimer, 1000);
             updateTimer();
         }
@@ -363,16 +372,55 @@
             const c = document.getElementById('historyList');
             if (h.length===0) { c.innerHTML='<h4>📋 Riwayat:</h4><p style="color:#999;">Belum ada</p>'; return; }
             let html = `<h4>📋 Riwayat (${h.length}):</h4>`;
-            h.slice(0,10).forEach((item,i)=>html+=`<div class="history-item"><strong>#${i+1} - ${item.namaManpower}</strong><br>📦 PO: ${item.noPO} | ⏱️ ${item.durasi} menit</div>`);
+            h.slice(0,10).forEach((item,i)=>html+=`<div class="history-item"><strong>#${i+1} - ${item.namaMenpower}</strong><br>📦 PO: ${item.noPO} | ⏱️ ${item.durasi} menit</div>`);
             html += `<button class="clear-btn" onclick="clearHistory()">🗑️ Hapus Riwayat</button>`;
             c.innerHTML = html;
         }
         
         function clearHistory() { if (confirm('Hapus riwayat?')) { localStorage.removeItem('workHistory'); loadHistory(); } }
         
-        function scanQRSimple() {
-            document.getElementById('noPO').focus();
-            alert('📷 Scan QR:\n\n1. Buka Kamera HP\n2. Scan QR Code PO\n3. Copy hasilnya\n4. Paste di kolom No. PO\n\nATAU ketik manual.');
+        // ========== QR SCANNER ==========
+        function startQRScan() {
+            if (typeof Html5Qrcode === 'undefined') {
+                document.getElementById('noPO').focus();
+                alert('📷 Scan tidak didukung.\nSilakan ketik No. PO manual.');
+                return;
+            }
+            
+            const modal = document.createElement('div');
+            modal.id = 'qrModal';
+            modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.95);z-index:9999;display:flex;align-items:center;justify-content:center;';
+            modal.innerHTML = `
+                <div style="background:white;padding:20px;border-radius:15px;width:90%;max-width:400px;text-align:center;">
+                    <h3>📷 Scan QR Code PO</h3>
+                    <p style="font-size:12px;color:#666;margin:8px 0;">Arahkan kamera ke QR Code</p>
+                    <div id="qrReader" style="width:100%;max-width:280px;margin:10px auto;"></div>
+                    <button onclick="closeQRScanner()" style="width:100%;padding:14px;background:#f44336;color:white;border:none;border-radius:8px;font-size:16px;margin-top:10px;cursor:pointer;">❌ Tutup</button>
+                </div>
+            `;
+            document.body.appendChild(modal);
+            
+            html5QrCode = new Html5Qrcode("qrReader");
+            html5QrCode.start(
+                { facingMode: "environment" },
+                { fps: 10, qrbox: { width: 250, height: 250 } },
+                (decodedText) => {
+                    document.getElementById('noPO').value = decodedText;
+                    if (navigator.vibrate) navigator.vibrate(200);
+                    closeQRScanner();
+                },
+                () => {}
+            ).catch(err => {
+                console.error('Camera error:', err);
+                closeQRScanner();
+                document.getElementById('noPO').focus();
+                alert('📷 Tidak bisa akses kamera.\nSilakan ketik No. PO manual.');
+            });
+            
+            window.closeQRScanner = function() {
+                if (html5QrCode) { html5QrCode.stop().catch(()=>{}); html5QrCode = null; }
+                const m = document.getElementById('qrModal'); if (m) m.remove();
+            };
         }
         
         function showError(id, msg) {
